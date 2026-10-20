@@ -28,7 +28,6 @@ export const config: Options.Testrunner = {
         'sauce:options': {
             build: 'calculadora-frontend-ts',
             name: 'Test Calculadora WebdriverIO',
-            ...( { tunnelName: 'mi-tunel-local' } as any ), // Conecta con tu túnel de Sauce Connect
         }
     }],
     
@@ -52,8 +51,8 @@ export const config: Options.Testrunner = {
     // ===================
     // Sauce Labs Credentials & Region
     // ===================
-    user: process.env.SAUCE_USERNAME || 'oauth-aimarsanm-3141c',
-    key: process.env.SAUCE_ACCESS_KEY || '7eb84f80-9632-4677-95af-0e1dc91f0881',
+    user: process.env.SAUCE_USERNAME,
+    key: process.env.SAUCE_ACCESS_KEY,
     region: 'eu', // Configurado para la región de Europa Central (Frankfurt)
 
     // ========

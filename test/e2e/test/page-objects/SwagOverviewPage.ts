@@ -1,4 +1,6 @@
+import { browser } from '@wdio/globals';
 import BasePage from './BasePage';
+import { DEFAULT_TIMEOUT } from '../configs/e2eConstants';
 
 type Needle = string | number;
 
@@ -23,13 +25,19 @@ class SwagOverviewPage extends BasePage {
    */
   async swag(needle: Needle): Promise<WebdriverIO.Element> {
     if (typeof needle === 'string') {
-      for (const swagItem of await this.swagItems) {
-        if ((await swagItem.getText()).includes(needle)){
-          return swagItem;
+      // Espera a que el catálogo renderice el producto antes de buscarlo
+      let found: WebdriverIO.Element | undefined;
+      await browser.waitUntil(async () => {
+        for (const swagItem of await this.swagItems) {
+          if ((await swagItem.getText()).includes(needle)) {
+            found = swagItem;
+            return true;
+          }
         }
-      }
+        return false;
+      }, { timeout: DEFAULT_TIMEOUT, timeoutMsg: `No se encontró el producto "${needle}"` });
 
-      return undefined;
+      return found;
     }
 
     return this.swagItems[needle];
@@ -46,7 +54,12 @@ class SwagOverviewPage extends BasePage {
    * Add a swag items to the cart
    */
   async addSwagToCart(needle: Needle) {
-    await (await this.swag(needle)).$('.btn_primary.btn_inventory').click();
+    const boton = await (await this.swag(needle)).$('.btn_inventory');
+    await boton.waitForClickable({ timeout: DEFAULT_TIMEOUT });
+    // Si el producto ya está en el carrito, el botón muestra "Remove" y no hay nada que hacer
+    if ((await boton.getAttribute('class')).includes('btn_primary')) {
+      await boton.click();
+    }
   }
 
   /**

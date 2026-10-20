@@ -1,7 +1,7 @@
 const BUILD_PREFIX = process.env.BUILD_PREFIX ? `GitHub Actions-` : '';
 
 import { config } from './wdio.shared.conf';
-import { SauceRegions } from '@wdio/types/build/Options';
+import type { SauceRegions } from '@wdio/types';
 import SauceLabs, { Job } from 'saucelabs';
 
 const BUILD_NAME = `${BUILD_PREFIX}Sauce Demo App build-${new Date().getTime()}`;
@@ -10,6 +10,8 @@ const defaultBrowserSauceOptions = {
     build: BUILD_NAME,
     screenResolution: '1600x1200',
     seleniumVersion: '4.40.0',
+    // Túnel Sauce Connect ya en marcha (sauce-connect run --tunnel-name mi-tunel-local)
+    tunnelName: 'mi-tunel-local',
 };
 
 const defaultRealDeviceSauceOptions = {
@@ -27,7 +29,24 @@ config.key = process.env.SAUCE_ACCESS_KEY;
 // in via the `region` property. Available short handles for regions are `us` (default) and `eu`.
 // These regions are used for the Sauce Labs VM cloud and the Sauce Labs Real Device Cloud.
 // If you don't provide the region, it defaults to `us`.
-config.region = (process.env.REGION || 'us') as SauceRegions;
+config.region = (process.env.REGION || 'eu') as 'us' | 'eu';
+
+// Cucumber: los mismos features y steps que en la config local
+config.framework = 'cucumber';
+config.specs = ['../features/**/*.feature'];
+config.cucumberOpts = {
+    requireModule: ['ts-node/register'],
+    // en Windows los globs no se resuelven en `require`: se listan los archivos
+    require: [
+        './test/step-definitions/common.steps.ts',
+        './test/step-definitions/login.steps.ts',
+        './test/step-definitions/carrito.steps.ts',
+        './test/step-definitions/catalogo.steps.ts',
+        './test/step-definitions/checkout.steps.ts',
+    ],
+    timeout: 120 * 1000,
+    tagExpression: '',
+};
 
 // ============
 // Capabilities
@@ -39,7 +58,7 @@ config.capabilities = [
   {
     browserName: 'chrome',
     platformName: 'Windows 11',
-    browserVersion: 'latest',
+    browserVersion: '155',
     // Needed for checkout.pdf.visual.spec.ts to pull the downloaded PDF back from
     // the remote VM via browser.getDownloadableFiles()/downloadFile() - only
     // supported on Selenium Grid sessions (Chrome/Edge/Firefox), not Safari or
@@ -55,38 +74,6 @@ config.capabilities = [
         'profile.password_manager_leak_detection': false,
       }
     },
-    'sauce:options': {
-      ...defaultBrowserSauceOptions,
-    },
-  },
-  {
-    browserName: 'firefox',
-    platformName: 'Windows 11',
-    browserVersion: 'latest',
-    // checkout.pdf.visual.spec.ts only runs on Chrome - see the note there
-    'wdio:exclude': ['../../test/specs/checkout.pdf.visual.spec.ts'],
-    'sauce:options': {
-      ...defaultBrowserSauceOptions,
-    },
-  },
-  {
-    browserName: 'MicrosoftEdge',
-    platformName: 'Windows 11',
-    browserVersion: 'latest',
-    'wdio:enforceWebDriverClassic': true,
-    // checkout.pdf.visual.spec.ts only runs on Chrome - see the note there
-    'wdio:exclude': ['../../test/specs/checkout.pdf.visual.spec.ts'],
-    'sauce:options': {
-      ...defaultBrowserSauceOptions,
-    },
-  },
-  {
-    browserName: 'safari',
-    platformName: 'macOS 15',
-    browserVersion: 'latest',
-    'wdio:enforceWebDriverClassic': true,
-    // checkout.pdf.visual.spec.ts only runs on Chrome - see the note there
-    'wdio:exclude': ['../../test/specs/checkout.pdf.visual.spec.ts'],
     'sauce:options': {
       ...defaultBrowserSauceOptions,
     },
@@ -127,20 +114,11 @@ config.capabilities = [
 // Services
 // ========
 config.services = config.services.concat([
+    // El túnel ya está corriendo: wdio no arranca otro
     ['sauce', {
-        sauceConnect: true,
-        sauceConnectOpts: {
-            logFile: './sc.log',
-            logLevel: 'debug',
-            proxyLocalhost: 'allow'
-        }
+        sauceConnect: false,
     }],
     'shared-store',
-    ['@saucelabs/wdio-sauce-visual-service', {
-        buildName: 'Sample App Web - Demo Visual Checks',
-        project: 'sample-app-web',
-        region: 'us-west-1',
-    }],
 ]);
 // =====
 // Hooks
